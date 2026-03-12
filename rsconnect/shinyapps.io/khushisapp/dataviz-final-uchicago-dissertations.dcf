@@ -5,6 +5,6 @@ account: khushisapp
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 16882942
-bundleId: 11698869
+bundleId:
 url: https://khushisapp.shinyapps.io/dataviz-final-uchicago-dissertations/
 version: 1

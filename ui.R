@@ -334,7 +334,22 @@ ui <- navbarPage(
             p("Absolute dissertation counts per division per decade across 130 years.")
         ),
         div(class = "plot-wrap",
-            plotlyOutput("fig3", height = "480px")
+            plotlyOutput("fig3", height = "480px"),
+            tags$div(
+              style = "margin-top:12px; font-size:0.85rem; color:#555; line-height:1.5;",
+              tags$b("Note:"), 
+              " Institutional structures have evolved over the past 130 years. ",
+              "Several professional schools appear later in the series because they were established or reorganized under different names, for example ",
+              tags$b("Chicago Booth School of Business"), " (formerly the Graduate School of Business) and ",
+              tags$b("Harris School of Public Policy"), 
+              ". Similarly, fields such as ",
+              tags$b("Computer Science"), 
+              " emerged much later as independent academic departments. These institutional changes help explain the later growth of the ",
+              tags$em("Professional Schools"), 
+              " and parts of the ",
+              tags$em("Physical Sciences"), 
+              " divisions in the figure."
+            )
         )
     )
   ),
@@ -370,8 +385,7 @@ ui <- navbarPage(
         div(class = "panel-header",
             p(class = "panel-number", "Visualization 06"),
             h2("Advising Flow by Division"),
-            p("A Sankey diagram showing how dissertation advising flows from division to top
-              advisors. Width of each flow encodes the number of dissertations supervised.")
+            p("A Sankey diagram showing how dissertation advising flows from division to top advisors. Width of each flow encodes the number of dissertations supervised.")
         ),
         fluidRow(
           column(4,
@@ -382,8 +396,18 @@ ui <- navbarPage(
           )
         ),
         div(class = "plot-wrap",
-            plotlyOutput("fig6", height = "600px")
+            plotlyOutput("fig6", height = "600px"),
+            tags$div(
+              style = "margin-top:12px; font-size:0.85rem; color:#555; line-height:1.5;",
+              tags$b("Note:"), " Advisors may supervise dissertations across multiple divisions. ",
+              "This Sankey diagram counts dissertations ", tags$em("within the selected division only"),
+              ", while the bar chart above shows each advisor’s ",
+              tags$em("total dissertations supervised across the entire university"), ". ",
+              tags$b("For example:"), " Jean Comaroff supervised ",
+              tags$b("71 dissertations overall"),
+              ", distributed across Social Sciences (50), Humanities (9), Biological Sciences (6), and the Divinity School (6)."
+            )
         )
     )
-  )
+ )
 )

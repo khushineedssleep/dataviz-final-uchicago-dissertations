@@ -364,95 +364,135 @@ server <- function(input, output, session) {
     if (div_filter == "All Divisions") {
       
       sankey_data <- advisor_parsed %>%
-        filter(!is.na(home_division), home_division %in% names(DIV_COLORS)) %>%
-        count(advisor, home_division, name = "n") %>%
-        group_by(home_division) %>%
+        filter(!is.na(Division_short), Division_short %in% names(DIV_COLORS)) %>%
+        count(advisor, Division_short, name = "n") %>%
+        group_by(Division_short) %>%
         slice_max(n, n = 10, with_ties = FALSE) %>%
         ungroup()
       
       div_totals <- advisor_parsed %>%
-        filter(!is.na(home_division), home_division %in% names(DIV_COLORS)) %>%
-        count(home_division, name = "div_total")
+        filter(!is.na(Division_short), Division_short %in% names(DIV_COLORS)) %>%
+        count(Division_short, name = "div_total")
       
       div_shares <- sankey_data %>%
-        group_by(home_division) %>%
+        group_by(Division_short) %>%
         summarise(top10_n = sum(n), .groups = "drop") %>%
-        left_join(div_totals, by = "home_division") %>%
-        mutate(pct   = round(100 * top10_n / div_total, 1),
-               label = paste0(home_division, "\n", pct, "% by top 10"))
+        left_join(div_totals, by = "Division_short") %>%
+        mutate(
+          pct = round(100 * top10_n / div_total, 1),
+          label = paste0(Division_short, "\n", pct, "% by top 10")
+        )
       
-      div_labels    <- setNames(div_shares$label, div_shares$home_division)
+      div_labels    <- setNames(div_shares$label, div_shares$Division_short)
       advisor_nodes <- unique(sankey_data$advisor)
       all_nodes     <- c(unname(div_labels), advisor_nodes)
       node_keys     <- c(names(div_labels), advisor_nodes)
       node_idx      <- setNames(seq_along(node_keys) - 1L, node_keys)
-      node_colors   <- c(
+      
+      node_colors <- c(
         unname(DIV_COLORS[names(div_labels)]),
         sapply(advisor_nodes, function(a) {
-          div <- sankey_data$home_division[sankey_data$advisor == a][1]
+          div <- sankey_data$Division_short[sankey_data$advisor == a][1]
           unname(DIV_COLORS[div])
         })
       )
-      link_colors <- sapply(sankey_data$home_division, function(d) {
+      
+      link_colors <- sapply(sankey_data$Division_short, function(d) {
         col <- col2rgb(DIV_COLORS[d])
         paste0("rgba(", col[1], ",", col[2], ",", col[3], ",0.25)")
       })
       
-      plot_ly(type = "sankey", orientation = "h",
-              node = list(label = all_nodes, color = node_colors, pad = 14, thickness = 22,
-                          hovertemplate = "<b>%{label}</b><extra></extra>"),
-              link = list(source = node_idx[sankey_data$home_division],
-                          target = node_idx[sankey_data$advisor],
-                          value  = sankey_data$n, color = link_colors,
-                          hovertemplate = "<b>%{source.label}</b> \u2192 <b>%{target.label}</b><br>%{value} dissertations<extra></extra>")
+      plot_ly(
+        type = "sankey", orientation = "h",
+        node = list(
+          label = all_nodes,
+          color = node_colors,
+          pad = 14,
+          thickness = 22,
+          hovertemplate = "<b>%{label}</b><extra></extra>"
+        ),
+        link = list(
+          source = node_idx[sankey_data$Division_short],
+          target = node_idx[sankey_data$advisor],
+          value  = sankey_data$n,
+          color  = link_colors,
+          hovertemplate = "<b>%{source.label}</b> → <b>%{target.label}</b><br>%{value} dissertations<extra></extra>"
+        )
       ) %>%
         plotly::layout(
-          title = list(text = paste0("<b>Advising Flow \u00b7 All Divisions</b><br>",
-                                     "<sup style='color:#767676'>Top 10 advisors per division \u00b7 % shows share of division total</sup>"),
-                       font = list(color = MAROON, size = 14), x = 0),
-          font = BASE_LAYOUT$font, paper_bgcolor = BASE_LAYOUT$paper_bgcolor,
+          title = list(
+            text = paste0(
+              "<b>Advising Flow · All Divisions</b><br>",
+              "<sup style='color:#767676'>Top 10 advisors per division · % shows share of division total</sup>"
+            ),
+            font = list(color = MAROON, size = 14),
+            x = 0
+          ),
+          font = BASE_LAYOUT$font,
+          paper_bgcolor = BASE_LAYOUT$paper_bgcolor,
           margin = list(l = 40, r = 40, t = 80, b = 40)
-        ) %>% config(displayModeBar = FALSE)
+        ) %>%
+        config(displayModeBar = FALSE)
       
     } else {
       
-      div_color   <- unname(DIV_COLORS[div_filter])
+      div_color <- unname(DIV_COLORS[div_filter])
+      
       sankey_data <- advisor_parsed %>%
-        filter(!is.na(home_division), home_division == div_filter) %>%
+        filter(!is.na(Division_short), Division_short == div_filter) %>%
         count(advisor, name = "n") %>%
         slice_max(n, n = 10, with_ties = FALSE) %>%
         arrange(desc(n))
       
       validate(need(nrow(sankey_data) > 0, "No advisor data for this division."))
       
-      div_total <- nrow(advisor_parsed[!is.na(advisor_parsed$home_division) &
-                                         advisor_parsed$home_division == div_filter, ])
+      div_total <- nrow(
+        advisor_parsed %>%
+          filter(!is.na(Division_short), Division_short == div_filter)
+      )
+      
       top10_pct <- round(100 * sum(sankey_data$n) / div_total, 1)
       
       all_nodes   <- c(paste0(div_filter, "\n", top10_pct, "% by top 10"), sankey_data$advisor)
       node_keys   <- c(div_filter, sankey_data$advisor)
       node_idx    <- setNames(seq_along(node_keys) - 1L, node_keys)
       node_colors <- rep(div_color, length(all_nodes))
-      col         <- col2rgb(div_color)
-      link_col    <- paste0("rgba(", col[1], ",", col[2], ",", col[3], ",0.22)")
       
-      plot_ly(type = "sankey", orientation = "h",
-              node = list(label = all_nodes, color = node_colors, pad = 15, thickness = 25,
-                          hovertemplate = "<b>%{label}</b><extra></extra>"),
-              link = list(source = rep(node_idx[div_filter], nrow(sankey_data)),
-                          target = node_idx[sankey_data$advisor],
-                          value  = sankey_data$n, color = link_col,
-                          hovertemplate = "<b>%{target.label}</b><br>%{value} dissertations<extra></extra>")
+      col <- col2rgb(div_color)
+      link_col <- paste0("rgba(", col[1], ",", col[2], ",", col[3], ",0.22)")
+      
+      plot_ly(
+        type = "sankey", orientation = "h",
+        node = list(
+          label = all_nodes,
+          color = node_colors,
+          pad = 15,
+          thickness = 25,
+          hovertemplate = "<b>%{label}</b><extra></extra>"
+        ),
+        link = list(
+          source = rep(node_idx[div_filter], nrow(sankey_data)),
+          target = node_idx[sankey_data$advisor],
+          value  = sankey_data$n,
+          color  = link_col,
+          hovertemplate = "<b>%{target.label}</b><br>%{value} dissertations<extra></extra>"
+        )
       ) %>%
         plotly::layout(
-          title = list(text = paste0("<b>Advising Flow \u00b7 ", div_filter, "</b><br>",
-                                     "<sup style='color:#767676'>Top 10 advisors account for <b>",
-                                     top10_pct, "%</b> of all supervised dissertations</sup>"),
-                       font = list(color = MAROON, size = 14), x = 0),
-          font = BASE_LAYOUT$font, paper_bgcolor = BASE_LAYOUT$paper_bgcolor,
+          title = list(
+            text = paste0(
+              "<b>Advising Flow · ", div_filter, "</b><br>",
+              "<sup style='color:#767676'>Top 10 advisors account for <b>",
+              top10_pct, "%</b> of all supervised dissertations</sup>"
+            ),
+            font = list(color = MAROON, size = 14),
+            x = 0
+          ),
+          font = BASE_LAYOUT$font,
+          paper_bgcolor = BASE_LAYOUT$paper_bgcolor,
           margin = list(l = 40, r = 40, t = 80, b = 40)
-        ) %>% config(displayModeBar = FALSE)
+        ) %>%
+        config(displayModeBar = FALSE)
     }
   })
-  
 }
